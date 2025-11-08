@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generar TAP - Passwordless Manager</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- MSAL.js -->
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+    
+    <!-- Anime.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .tap-code {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 3px;
+            font-size: 2rem;
+            background: #f8f9fa;
+            border: 3px dashed #0078d4;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            word-break: break-all;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tap-code::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 120, 212, 0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .security-shield {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes pulse-glow {
+            from { box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); }
+            to { box-shadow: 0 0 30px rgba(102, 126, 234, 0.8); }
+        }
+        
+        .countdown-critical {
+            animation: countdown-pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes countdown-pulse {
+            0%, 100% { color: #dc2626; transform: scale(1); }
+            50% { color: #ef4444; transform: scale(1.05); }
+        }
+        
+        .floating-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-lg relative z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <img class="h-8 w-auto" src="https://docs.microsoft.com/es-es/media/logos/logo-ms-social.png" alt="Microsoft">
+                    </div>
+                    <div class="ml-4">
+                        <h1 class="text-xl font-bold text-gray-900">Passwordless Manager</h1>
+                        <p class="text-sm text-gray-600">Generador de Temporary Access Pass</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>Volver
+                    </a>
+                    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="glass-effect rounded-2xl p-8 max-w-4xl mx-auto">
+                <div class="floating-animation mb-6">
+                    <i class="fas fa-key text-6xl security-shield"></i>
+                </div>
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">
+                    <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        Generar Temporary Access Pass
+                    </span>
+                </h2>
+                <p class="text-xl text-gray-700 mb-6">
+                    Crea un código de acceso temporal seguro para autenticación de emergencia o configuración inicial.
+                </p>
+                <div class="flex justify-center space-x-6">
+                    <div class="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-medium">
+                        <i class="fas fa-clock mr-2"></i>
+                        Temporal
+                    </div>
+                    <div class="bg-green-100 text-green-800 px-4 py-2 rounded-lg font-medium">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        Seguro
+                    </div>
+                    <div class="bg-purple-100 text-purple-800 px-4 py-2 rounded-lg font-medium">
+                        <i class="fas fa-mobile-alt mr-2"></i>
+                        Multi-factor
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Message Containers -->
+            <div id="tapErrorContainer"></div>
+            <div id="tapSuccessContainer"></div>
+
+            <!-- TAP Generation Form -->
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Configurar TAP</h3>
+                    <p class="text-gray-600">Personaliza la configuración de tu Temporary Access Pass</p>
+                </div>
+                
+                <form id="tapForm" class="max-w-2xl mx-auto space-y-6">
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="lifetime" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-clock mr-2"></i>
+                                Tiempo de Vida (minutos)
+                            </label>
+                            <select id="lifetime" name="lifetime" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="30">30 minutos</option>
+                                <option value="60" selected>1 hora</option>
+                                <option value="120">2 horas</option>
+                                <option value="480">8 horas</option>
+                                <option value="1440">24 horas</option>
+                                <option value="4320">3 días</option>
+                                <option value="10080">1 semana</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">El TAP expirará automáticamente después de este tiempo</p>
+                        </div>
+                        
+                        <div>
+                            <label for="usableOnce" class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-lock mr-2"></i>
+                                Restricciones de Uso
+                            </label>
+                            <div class="flex items-center space-x-4">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="usableOnce" name="usableOnce" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                    <span class="ml-2 text-sm text-gray-700">Uso único</span>
+                                </label>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Si se marca, el TAP solo podrá usarse una vez</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-blue-900 mb-2">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Información Importante
+                        </h4>
+                        <ul class="text-sm text-blue-800 space-y-1">
+                            <li>• El TAP es válido solo para tu cuenta</li>
+                            <li>• No compartas el código con nadie</li>
+                            <li>• El código se mostrará solo una vez</li>
+                            <li>• Guárdalo en un lugar seguro temporalmente</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button type="button" id="generateTAPBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors pulse-glow">
+                            <i class="fas fa-magic mr-2"></i>
+                            Generar TAP
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TAP Display -->
+            <div id="tapDisplayContainer" class="bg-white rounded-xl shadow-lg p-8 mb-8 hidden">
+                <div class="text-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Tu Temporary Access Pass</h3>
+                    <p class="text-gray-600">Este código es temporal y confidencial</p>
+                </div>
+                
+                <div class="max-w-2xl mx-auto">
+                    <div class="tap-code mb-6" id="tapCode"></div>
+                    
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600 mb-1">Expira:</p>
+                            <p id="tapExpires" class="font-semibold text-gray-900"></p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600 mb-1">Tiempo restante:</p>
+                            <p id="tapCountdown" class="font-bold text-lg text-green-600"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center space-x-4">
+                        <button id="copyTAPBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors hidden">
+                            <i class="fas fa-copy mr-2"></i>
+                            Copiar Código
+                        </button>
+                        <button onclick="tapManager.hideTAPDisplay()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                            <i class="fas fa-eye-slash mr-2"></i>
+                            Ocultar TAP
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAP History -->
+            <div class="bg-white rounded-xl shadow-lg p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-2xl font-bold text-gray-900">
+                        <i class="fas fa-history mr-2"></i>
+                        Historial de TAPs
+                    </h3>
+                    <button id="refreshHistoryBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>
+                        Actualizar
+                    </button>
+                </div>
+                
+                <div id="tapHistoryList" class="space-y-4">
+                    <div class="text-center py-8">
+                        <i class="fas fa-key text-4xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-500">No hay TAPs generados aún</p>
+                        <p class="text-sm text-gray-400">Los TAPs generados aparecerán aquí</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Security Tips -->
+    <section class="py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-8">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">
+                    <i class="fas fa-shield-alt mr-2 text-green-600"></i>
+                    Mejores Prácticas de Seguridad
+                </h3>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="text-center">
+                        <div class="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+                        </div>
+                        <h4 class="font-semibold text-gray-900 mb-2">No Compartas</h4>
+                        <p class="text-sm text-gray-600">Nunca compartas tu TAP con nadie, incluso con el soporte técnico</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-clock text-2xl text-blue-600"></i>
+                        </div>
+                        <h4 class="font-semibold text-gray-900 mb-2">Uso Temporal</h4>
+                        <p class="text-sm text-gray-600">Los TAPs son para uso temporal. No los uses como método principal</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-eye-slash text-2xl text-green-600"></i>
+                        </div>
+                        <h4 class="font-semibold text-gray-900 mb-2">Oculta el Código</h4>
+                        <p class="text-sm text-gray-600">Asegúrate de que nadie más vea el código cuando lo uses</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-gray-400">
+                © 2024 Microsoft Passwordless Manager. Desarrollado con tecnología Microsoft Entra ID.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="tap.js"></script>
+    
+    <script>
+        // Inicialización específica para TAP page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar autenticación
+            if (!window.authManager || !window.authManager.isAuthenticated) {
+                // Redirigir a autenticación si es necesario
+                window.location.href = 'index.html';
+            }
+            
+            // Cargar historial al iniciar
+            setTimeout(() => {
+                if (window.tapManager) {
+                    window.tapManager.refreshTAPList();
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>
