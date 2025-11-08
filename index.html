@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passwordless Manager - Microsoft Entra ID</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- MSAL.js -->
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+    
+    <!-- Anime.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .hero-bg {
+            background-image: url('resources/hero-bg.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .step-card {
+            transition: all 0.3s ease;
+        }
+        
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+        }
+        
+        .tap-code {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 2px;
+            font-size: 1.5rem;
+            background: #f8f9fa;
+            border: 2px dashed #0078d4;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .floating-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="bg-white shadow-lg relative z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <img class="h-8 w-auto" src="https://docs.microsoft.com/es-es/media/logos/logo-ms-social.png" alt="Microsoft">
+                    </div>
+                    <div class="ml-4">
+                        <h1 class="text-xl font-bold text-gray-900">Passwordless Manager</h1>
+                        <p class="text-sm text-gray-600">Transición segura a autenticación sin contraseña</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="text-sm font-medium text-gray-900" id="userName">Usuario</p>
+                        <p class="text-xs text-gray-500" id="userEmail">usuario@ejemplo.com</p>
+                    </div>
+                    <button id="logoutBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="heroSection" class="hero-bg relative py-20">
+        <div class="absolute inset-0 bg-black bg-opacity-40"></div>
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="glass-effect rounded-2xl p-8 max-w-4xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-900 mb-4">
+                    <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        Bienvenido a Passwordless
+                    </span>
+                </h2>
+                <p class="text-xl text-gray-700 mb-6">
+                    Descubre una forma más segura y conveniente de acceder a tus aplicaciones sin contraseñas.
+                </p>
+                <div class="flex justify-center space-x-4">
+                    <div class="bg-blue-600 text-white px-6 py-3 rounded-lg">
+                        <i class="fas fa-shield-alt mr-2"></i>
+                        Seguridad Mejorada
+                    </div>
+                    <div class="bg-green-600 text-white px-6 py-3 rounded-lg">
+                        <i class="fas fa-rocket mr-2"></i>
+                        Acceso Rápido
+                    </div>
+                    <div class="bg-purple-600 text-white px-6 py-3 rounded-lg">
+                        <i class="fas fa-mobile-alt mr-2"></i>
+                        Multi-dispositivo
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="bg-gray-50 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <!-- Progress Section -->
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                <div class="text-center mb-8">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">Tu Progreso hacia Passwordless</h3>
+                    <p class="text-gray-600" id="progressText">Paso 1 de 3</p>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-8">
+                    <div id="progressBar" class="bg-gradient-to-r from-blue-600 to-purple-600 h-3 rounded-full transition-all duration-500" style="width: 33%"></div>
+                </div>
+                
+                <!-- Step Indicators -->
+                <div class="flex justify-between items-center mb-8">
+                    <div class="flex flex-col items-center">
+                        <div id="step1Indicator" class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
+                        <p class="text-sm font-medium mt-2 text-center">Verificación</p>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-300 mx-4"></div>
+                    <div class="flex flex-col items-center">
+                        <div id="step2Indicator" class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-white font-bold">2</div>
+                        <p class="text-sm font-medium mt-2 text-center">Configuración</p>
+                    </div>
+                    <div class="flex-1 h-1 bg-gray-300 mx-4"></div>
+                    <div class="flex flex-col items-center">
+                        <div id="step3Indicator" class="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-white font-bold">3</div>
+                        <p class="text-sm font-medium mt-2 text-center">Validación</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Container -->
+            <div id="messageContainer"></div>
+
+            <!-- Wizard Content -->
+            <div id="wizardContainer" class="bg-white rounded-xl shadow-lg overflow-hidden">
+                
+                <!-- Step 1: Verification -->
+                <div id="step1Content" class="p-8">
+                    <div class="flex items-center mb-6">
+                        <img src="resources/step1.png" alt="Verificación" class="w-16 h-16 mr-4 floating-animation">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Verificación de Requisitos</h3>
+                            <p class="text-gray-600">Verificaremos que tu entorno cumple con los requisitos para passwordless.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                        <h4 class="font-semibold text-blue-900 mb-3">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Requisitos Necesarios:
+                        </h4>
+                        <ul class="space-y-2 text-blue-800">
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-600 mr-3"></i>
+                                Dispositivo con Windows 10/11 o dispositivo móvil compatible
+                            </li>
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-600 mr-3"></i>
+                                Microsoft Authenticator instalado (móvil)
+                                </li>
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-600 mr-3"></i>
+                                Windows Hello habilitado (Windows)
+                            </li>
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-600 mr-3"></i>
+                                Navegador moderno con soporte WebAuthn
+                            </li>
+                            <li class="flex items-center">
+                                <i class="fas fa-check text-green-600 mr-3"></i>
+                                Permisos de administrador en el tenant
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="text-center">
+                        <button id="verifyRequirementsBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                            <i class="fas fa-search mr-2"></i>
+                            Verificar Requisitos
+                        </button>
+                        <div id="verifyLoading" class="hidden mt-4">
+                            <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+                            <p class="text-gray-600 mt-2">Verificando...</p>
+                        </div>
+                    </div>
+                    
+                    <div id="verificationResults"></div>
+                </div>
+
+                <!-- Step 2: Setup -->
+                <div id="step2Content" class="p-8 hidden">
+                    <div class="flex items-center mb-6">
+                        <img src="resources/step2.png" alt="Configuración" class="w-16 h-16 mr-4 floating-animation">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Configuración de Métodos</h3>
+                            <p class="text-gray-600">Configuraremos los métodos de autenticación passwordless para tu cuenta.</p>
+                        </div>
+                    </div>
+                    
+                    <div id="setupMethodsContainer" class="space-y-6">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                            <h4 class="font-semibold text-yellow-900 mb-3">
+                                <i class="fas fa-mobile-alt mr-2"></i>
+                                Configuración Microsoft Authenticator
+                            </h4>
+                            <p class="text-yellow-800 mb-4">
+                                Sigue estos pasos para configurar Microsoft Authenticator en tu dispositivo móvil:
+                            </p>
+                            <ol class="list-decimal list-inside space-y-2 text-yellow-800">
+                                <li>Descarga Microsoft Authenticator desde tu tienda de aplicaciones</li>
+                                <li>Abre la aplicación y selecciona "Agregar cuenta"</li>
+                                <li>Escanea el código QR que aparecerá a continuación</li>
+                                <li>Completa la verificación en tu dispositivo</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                            <h4 class="font-semibold text-purple-900 mb-3">
+                                <i class="fas fa-laptop mr-2"></i>
+                                Configuración Windows Hello
+                            </h4>
+                            <p class="text-purple-800 mb-4">
+                                Para dispositivos Windows, configuraremos Windows Hello:
+                            </p>
+                            <ol class="list-decimal list-inside space-y-2 text-purple-800">
+                                <li>Ve a Configuración > Cuentas > Opciones de inicio de sesión</li>
+                                <li>Configura PIN, huella digital o reconocimiento facial</li>
+                                <li>Habilita Windows Hello para empresas</li>
+                                <li>Verifica la configuración</li>
+                            </ol>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button id="setupMethodsBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                                <i class="fas fa-cog mr-2"></i>
+                                Comenzar Configuración
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Validation -->
+                <div id="step3Content" class="p-8 hidden">
+                    <div class="flex items-center mb-6">
+                        <img src="resources/step3.png" alt="Validación" class="w-16 h-16 mr-4 floating-animation">
+                        <div>
+                            <h3 class="text-2xl font-bold text-gray-900">Validación Final</h3>
+                            <p class="text-gray-600">Validaremos que todo está configurado correctamente.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-6">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                            <h4 class="font-semibold text-green-900 mb-3">
+                                <i class="fas fa-shield-alt mr-2"></i>
+                                Pruebas de Seguridad
+                            </h4>
+                            <p class="text-green-800 mb-4">
+                                Realizaremos las siguientes validaciones:
+                            </p>
+                            <ul class="space-y-2 text-green-800">
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-600 mr-3"></i>
+                                    Verificación de método de autenticación principal
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-600 mr-3"></i>
+                                    Prueba de autenticación sin contraseña
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-600 mr-3"></i>
+                                    Validación de respaldo de autenticación
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-600 mr-3"></i>
+                                    Confirmación de configuración del tenant
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button id="validateSetupBtn" class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                                <i class="fas fa-check-double mr-2"></i>
+                                Validar Configuración
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <div class="bg-gray-50 px-8 py-4 border-t flex justify-between items-center">
+                    <button id="prevStepBtn" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg font-medium transition-colors" style="display: none;">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Anterior
+                    </button>
+                    
+                    <div class="flex-1"></div>
+                    
+                    <button id="nextStepBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                        Siguiente
+                        <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    
+                    <button id="completeSetupBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition-colors" style="display: none;">
+                        <i class="fas fa-check mr-2"></i>
+                        Completar Configuración
+                    </button>
+                </div>
+            </div>
+
+            <!-- Completion Screen -->
+            <div id="completionScreen" class="hidden bg-white rounded-xl shadow-lg p-8 text-center">
+                <div id="successIcon" class="mb-6">
+                    <img src="resources/success.png" alt="Éxito" class="w-24 h-24 mx-auto pulse-animation">
+                </div>
+                
+                <h3 class="text-3xl font-bold text-gray-900 mb-4">
+                    <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                    ¡Configuración Completada!
+                </h3>
+                
+                <p class="text-xl text-gray-600 mb-8">
+                    Has habilitado exitosamente la autenticación sin contraseña en tu cuenta.
+                </p>
+                
+                <div class="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
+                    <h4 class="font-semibold text-green-900 mb-3">¿Qué sigue?</h4>
+                    <ul class="text-left space-y-2 text-green-800">
+                        <li class="flex items-center">
+                            <i class="fas fa-key text-blue-600 mr-3"></i>
+                            Puedes generar Temporary Access Pass para acceso temporal
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-mobile-alt text-purple-600 mr-3"></i>
+                            Usa Microsoft Authenticator para iniciar sesión
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-laptop text-green-600 mr-3"></i>
+                            Aprovecha Windows Hello en tus dispositivos Windows
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-shield-alt text-orange-600 mr-3"></i>
+                            Tu cuenta ahora es más segura y conveniente
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="flex justify-center space-x-4">
+                    <button id="generateTapBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-key mr-2"></i>
+                        Generar TAP
+                    </button>
+                    <button onclick="window.location.reload()" class="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-redo mr-2"></i>
+                        Comenzar de Nuevo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Authentication Required Modal -->
+    <div id="authRequiredModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-8 max-w-md mx-4">
+            <div class="text-center">
+                <i class="fas fa-lock text-4xl text-blue-600 mb-4"></i>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Autenticación Requerida</h3>
+                <p class="text-gray-600 mb-6">
+                    Debes iniciar sesión con tu cuenta Microsoft para continuar con la configuración passwordless.
+                </p>
+                <div class="flex justify-center space-x-4">
+                    <button onclick="window.authManager.login()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Iniciar Sesión
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p class="text-gray-400">
+                © 2024 Microsoft Passwordless Manager. Desarrollado con tecnología Microsoft Entra ID.
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="auth.js"></script>
+    <script src="tap.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
